@@ -49,8 +49,8 @@ config_features_before() {
 
 main() {
     # Mainline Branch 6.6.8
-    local linux='https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.6.8.tar.xz'
-    local lxsha='5036c434e11e4b36d8da3f489851f7f829cf785fa7f7887468537a9ea4572416'
+    #local linux='https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.6.8.tar.xz'
+    #local lxsha='5036c434e11e4b36d8da3f489851f7f829cf785fa7f7887468537a9ea4572416'
 
     # Mainline Branch 6.6.7
     #local linux='https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.6.7.tar.xz'
@@ -88,8 +88,12 @@ main() {
     #local linux='https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.5.9.tar.xz'
     #local lxsha='c6662f64713f56bf30e009c32eac15536fad5fd1c02e8a3daf62a0dc2f058fd5'
 
-    local lf="$(basename "$linux")"
-    local lv="$(echo "$lf" | sed -nE 's/linux-(.*)\.tar\..z/\1/p')"
+    #local branch="rpi-6.6.y"
+    local lv="20231123"
+    local tag="stable_${lv}"
+
+    #local lf="$(basename "$linux")"
+    #local lv="$(echo "$lf" | sed -nE 's/linux-(.*)\.tar\..z/\1/p')"
 
     if [ '_clean' = "_$1" ]; then
         echo "\n${h1}cleaning...${rst}"
@@ -102,6 +106,13 @@ main() {
         exit 0
     fi
 
+    # Download Kernel Sources from Raspberry PI Linux Kernel Repository
+    mkdir -p kernel-$lv
+    if [ ! -d "kernel-$lv/linux-$lv" ]; then
+       #git clone --depth=1 --branch $branch https://github.com/raspberrypi/linux
+       git clone --depth=1 --branch $tag https://github.com/raspberrypi/linux kernel-$lv/linux-$lv
+    fi
+
     check_installed 'screen' 'build-essential' 'python3' 'flex' 'bison' 'pahole' 'debhelper'  'bc' 'rsync' 'libncurses-dev' 'libelf-dev' 'libssl-dev' 'lz4' 'zstd'
 
     if [ -z $STY ] && [ -z $TMUX ]; then
@@ -109,24 +120,24 @@ main() {
         exit 7
     fi
 
-    mkdir -p "kernel-$lv"
-    [ -f "kernel-$lv/$lf" ] || wget "$linux" -P "kernel-$lv"
+    #mkdir -p "kernel-$lv"
+    #[ -f "kernel-$lv/$lf" ] || wget "$linux" -P "kernel-$lv"
+    #
+    #if [ "_$lxsha" != "_$(sha256sum "kernel-$lv/$lf" | cut -c1-64)" ]; then
+    #    echo "invalid hash for linux source file: $lf"
+    #    exit 5
+    #fi
 
-    if [ "_$lxsha" != "_$(sha256sum "kernel-$lv/$lf" | cut -c1-64)" ]; then
-        echo "invalid hash for linux source file: $lf"
-        exit 5
-    fi
-
-    if [ ! -d "kernel-$lv/linux-$lv" ]; then
-        tar -C "kernel-$lv" -xavf "kernel-$lv/$lf"
-
-	# Copy defconfig to defconfig.default, so that we don't always re-add entries in case of multiple make_kernel.sh invocations
-	cp "kernel-$lv/linux-$lv/arch/arm64/configs/defconfig" "kernel-$lv/linux-$lv/arch/arm64/configs/defconfig.default"
-
-        for patch in patches/*.patch; do
-            patch -p1 -d "kernel-$lv/linux-$lv" -i "../../$patch"
-        done
-    fi
+    #if [ ! -d "kernel-$lv/linux-$lv" ]; then
+    #    tar -C "kernel-$lv" -xavf "kernel-$lv/$lf"
+    #
+    #	# Copy defconfig to defconfig.default, so that we don't always re-add entries in case of multiple make_kernel.sh invocations
+    #	cp "kernel-$lv/linux-$lv/arch/arm64/configs/defconfig" "kernel-$lv/linux-$lv/arch/arm64/configs/defconfig.default"
+    #
+    #    for patch in patches/*.patch; do
+    #        patch -p1 -d "kernel-$lv/linux-$lv" -i "../../$patch"
+    #    done
+    #fi
 
     # build
     if [ '_inc' != "_$1" ]; then
@@ -135,20 +146,24 @@ main() {
         [ -z "$1" ] || echo "$1" > "kernel-$lv/linux-$lv/.version"
 
 	# First of all restore default (as it shipped with kernel archive) defconfig
-	cp "kernel-$lv/linux-$lv/arch/arm64/configs/defconfig.default" "kernel-$lv/linux-$lv/arch/arm64/configs/defconfig"
+	#cp "kernel-$lv/linux-$lv/arch/arm64/configs/defconfig.default" "kernel-$lv/linux-$lv/arch/arm64/configs/defconfig"
 
 	# Start with custom config file
-        cp "config-available/kernel-6.6.1-1" "kernel-$lv/linux-$lv/arch/arm64/configs/defconfig"
+        #cp "config-available/kernel-6.6.1-1" "kernel-$lv/linux-$lv/arch/arm64/configs/defconfig"
         #"./kernel-$lv/linux-$lv/scripts/config" --file "kernel-$lv/linux-$lv/arch/arm64/configs/defconfig" --module CONFIG_SPI_ROCKCHIP_SFC
 
+        # Start with MAKE defconfig
+        KERNEL=kernel8
+        make -C "kernel-$lv/linux-$lv" ARCH=arm64 bcm2711_defconfig
+
 	# Then apply required fixes to defconfig
-        config_fixups "kernel-$lv/linux-$lv" "arch/arm64/configs/defconfig"
+        #config_fixups "kernel-$lv/linux-$lv" "arch/arm64/configs/defconfig"
 
 	# Then load (optional) features overriding kernel defaults "a priori"
-        config_features_before "kernel-$lv/linux-$lv" "arch/arm64/configs/defconfig"
+        #config_features_before "kernel-$lv/linux-$lv" "arch/arm64/configs/defconfig"
 
 	# Then Generate Default Configuration
-	make -C "kernel-$lv/linux-$lv" ARCH=arm64 defconfig
+	#make -C "kernel-$lv/linux-$lv" ARCH=arm64 defconfig
 
 	# Use custom defconfig
 	#wget https://gitlab.com/-/snippets/3622915/raw/main/docker_defconfig -O "kernel-$lv/linux-$lv/.config"
@@ -167,7 +182,7 @@ main() {
     export SOURCE_DATE_EPOCH="$(stat -c %Y "kernel-$lv/linux-$lv/README")"
     export KDEB_CHANGELOG_DIST='stable'
     export KBUILD_BUILD_TIMESTAMP="Debian $kv-$bv $(date -d @$SOURCE_DATE_EPOCH +'(%Y-%m-%d)')"
-    export KBUILD_BUILD_HOST='github.com/inindev'
+    export KBUILD_BUILD_HOST='github.com/luckylinux'
     export KBUILD_BUILD_USER='linux-kernel'
     export KBUILD_BUILD_VERSION="$bv"
 
