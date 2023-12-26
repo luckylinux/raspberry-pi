@@ -7,13 +7,6 @@ sudo apt install aptitude libcurl4-openssl-dev libpam0g-dev lsb-release build-es
 sudo apt install build-essential autoconf automake libtool gawk fakeroot libblkid-dev uuid-dev libudev-dev libssl-dev zlib1g-dev libaio-dev libattr1-dev libelf-dev python3 python3-dev python3-setuptools python3-cffi libffi-dev python3-packaging git libcurl4-openssl-dev debhelper-compat dh-python po-debconf python3-all-dev python3-sphinx
 
 # Build ZFS Utils & Modules/DKMS
-#!/bin/bash
-# Install Requirements
-sudo apt --no-install-recommends install dkms
-sudo apt install dh-dkms
-sudo apt install aptitude libcurl4-openssl-dev libpam0g-dev lsb-release build-essential autoconf automake libtool libblkid-dev uuid-dev libudev-dev libssl-dev zlib1g-dev libaio-dev libattr1-dev libelf-dev python3 python3-dev python3-setuptools python3-cffi libffi-dev python3-packaging git libcurl4-openssl-dev debhel>
-sudo apt install build-essential autoconf automake libtool gawk fakeroot libblkid-dev uuid-dev libudev-dev libssl-dev zlib1g-dev libaio-dev libattr1-dev libelf-dev python3 python3-dev python3-setuptools python3-cffi libffi-dev python3-packaging git libcurl4-openssl-dev debhelper-compat dh-python po-debconf python3-a>
-
 # Define Desired Version
 version="2.2.2"
 
@@ -41,7 +34,7 @@ wget https://raw.githubusercontent.com/chimera-linux/cports/master/main/zfs/patc
 patch -p1 < aarch64-disable-neon.patch
 
 sh autogen.sh
-./configure
+./configure --with-linux=/usr/src/linux-headers-6.6.8-v8+
 make -s -j$(nproc)
 make native-deb
 make native-deb-utils native-deb-dkms
